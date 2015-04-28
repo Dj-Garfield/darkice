@@ -119,11 +119,15 @@ static const char fileid[] = "$Id$";
  *----------------------------------------------------------------------------*/
 void
 FileSink :: init (  const char    * configName,
-                    const char    * name )          throw ( Exception )
+                    const char    * name,
+		    bool macro, bool create )          throw ( Exception )
 {
     this->configName  = Util::strDup(configName);
     fileName          = Util::strDup(name);
     fileDescriptor    = 0;
+    curFile 	      = NULL;
+    createFile	      = create;
+    macroExpand       = macro;
 }
 
 
@@ -137,6 +141,9 @@ FileSink :: strip ( void)                           throw ( Exception )
         close();
     }
 
+    if(curFile!= NULL && curFile != fileName)
+	delete[] curFile;
+
     delete[] fileName;
 }
 
@@ -149,7 +156,7 @@ FileSink :: FileSink (  const FileSink &    fs )    throw ( Exception )
 {
     int     fd;
     
-    init( fs.configName, fs.fileName);
+    init( fs.configName, fs.fileName, macroExpand, createFile);
     
     if ( (fd = fs.fileDescriptor ? dup( fs.fileDescriptor) : 0) == -1 ) {
         strip();
@@ -176,7 +183,7 @@ FileSink :: operator= (  const FileSink &    fs )   throw ( Exception )
         /* then build up */
         Sink::operator=( fs );
         
-        init( fs.configName, fs.fileName);
+        init( fs.configName, fs.fileName, macroExpand, createFile);
         
         if ( (fd = fs.fileDescriptor ? dup( fs.fileDescriptor) : 0) == -1 ) {
             strip();
@@ -189,16 +196,54 @@ FileSink :: operator= (  const FileSink &    fs )   throw ( Exception )
     return *this;
 }
 
+/*------------------------------------------------------------------------------
+ * Return current working file name, with appropriate macro expansions if neccy
+ *----------------------------------------------------------------------------*/
+
+char *
+FileSink :: getFileName( void )
+{
+    if(curFile != NULL)
+	return curFile;
+    if(!macroExpand)
+    {
+	curFile = fileName;
+    }
+    else
+    {
+	const int inlen = Util::strLen(fileName);
+	const int outlen = inlen + 256;
+	//FIXME: Possible truncated string...
+	curFile = new char[outlen + 1];
+	int i,j, tm2;
+	time_t tm = 0;
+	for(i = 0, j = 0; i < inlen && j < outlen ; i++)
+	{
+	    if(fileName[i] != '%')
+		curFile[j++] = fileName[i];
+	    else
+	    {
+		if(tm == 0)
+		    tm = time(NULL);
+		    tm2 = (int)tm;
+		//FIXME: Possible buffer overflow...
+		j += sprintf(&(curFile[j]),"%d",tm2);
+	    }
+	}
+	curFile[j] = '\0';
+    }
+    return curFile;
+}
 
 /*------------------------------------------------------------------------------
  *  Check wether a file exists and is regular file
  *----------------------------------------------------------------------------*/
 bool
-FileSink :: exists ( void ) const               throw ()
+FileSink :: exists ( void )               throw ()
 {
     struct stat     st;
 
-    if ( stat( (const char*)fileName, &st) == -1 ) {
+    if ( stat( getFileName(), &st) == -1 ) {
         return false;
     }
 
@@ -220,8 +265,8 @@ FileSink :: create ( void )                     throw ( Exception )
     /* filemode default to 0666 */
     const int filemode = (S_IRUSR|S_IWUSR|S_IWGRP|S_IRGRP|S_IROTH|S_IWOTH) ;
     /* create the file */
-    if ( (fd = ::creat( fileName, filemode )) == -1 ) {
-        reportEvent( 3, "can't create file", fileName, errno);
+    if ( (fd = ::creat( getFileName(), filemode )) == -1 ) {
+        reportEvent( 3, "can't create file", getFileName(), errno);
         return false;
     }
 
@@ -240,14 +285,17 @@ FileSink :: open ( void )                       throw ( Exception )
         return false;
     }
 
-    if ( (fileDescriptor = ::open( fileName, O_WRONLY | O_TRUNC, 0)) == -1 ) {
+    if( createFile && !exists())
+	if(!create())
+	    return false;
+
+    if ( (fileDescriptor = ::open( getFileName(), O_WRONLY | O_TRUNC, 0)) == -1 ) {
         fileDescriptor = 0;
         return false;
     }
 
     return true;
 }
-
 
 /*------------------------------------------------------------------------------
  *  Check wether the file can be written to
@@ -259,7 +307,7 @@ FileSink :: canWrite (     unsigned int    sec,
     fd_set              fdset;
     struct timespec     timespec;
     sigset_t            sigset;
-    int                 ret;
+    int			ret;
 
     if ( !isOpen() ) {
         return false;
@@ -271,12 +319,8 @@ FileSink :: canWrite (     unsigned int    sec,
     timespec.tv_sec  = sec;
     timespec.tv_nsec = usec * 1000L;
 
-    // mask out SIGUSR1, as we're expecting that signal for other reasons
-    sigemptyset(&sigset);
-    sigaddset(&sigset, SIGUSR1);
-
     ret = pselect( fileDescriptor + 1, NULL, &fdset, NULL, &timespec, &sigset);
-    
+
     if ( ret == -1 ) {
         throw Exception( __FILE__, __LINE__, "select error");
     }
@@ -310,7 +354,6 @@ FileSink :: write (    const void    * buf,
 
     return ret;
 }
-
 
 /*------------------------------------------------------------------------------
  *  Get the file name to where to move the data saved so far.
@@ -365,7 +408,6 @@ FileSink :: cut ( void )                            throw ()
     open();
 }
 
-
 /*------------------------------------------------------------------------------
  *  Close the FileSink
  *----------------------------------------------------------------------------*/
@@ -379,6 +421,9 @@ FileSink :: close ( void )                          throw ( Exception )
     flush();
     ::close( fileDescriptor);
     fileDescriptor = 0;
+    if(curFile != NULL)
+    {
+	delete[] curFile;
+	curFile = NULL;
+    }
 }
-
-
