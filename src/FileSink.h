@@ -69,6 +69,10 @@ class FileSink : public Sink, public virtual Reporter
          */
         char      * fileName;
 
+	char	  * curFile;
+	bool	  macroExpand;
+	bool	  createFile;
+
         /**
          *  Initialize the object.
          *  
@@ -79,7 +83,8 @@ class FileSink : public Sink, public virtual Reporter
          */
         void
         init (  const char    * configName,
-                const char    * name )              throw ( Exception );
+                const char    * name,
+		bool macro, bool create )              throw ( Exception );
 
         /**
          *  De-initialize the object.
@@ -89,15 +94,11 @@ class FileSink : public Sink, public virtual Reporter
         void
         strip ( void )                              throw ( Exception );
 
-        /**
-         *  Get the file name to where to move the data saved so far.
-         *  Used in cut().
-         *
-         *  @return the file name where to move the data saved so far.
-         *  @throws Exception on file operation errors
-         */
-        std::string
-        getArchiveFileName( void )                  throw ( Exception );
+        char *
+        getFileName( void );
+
+	std::string
+	getArchiveFileName ( void )             throw ( Exception );
 
 
     protected:
@@ -131,9 +132,10 @@ class FileSink : public Sink, public virtual Reporter
          */
         inline
         FileSink(   const char        * configName,
-                    const char        * name )      throw ( Exception )
+                    const char        * name,
+		    bool macro, bool create )      throw ( Exception )
         {
-            init( configName, name);
+            init( configName, name, macro, create);
         }
 
         /**
@@ -166,24 +168,13 @@ class FileSink : public Sink, public virtual Reporter
         operator= ( const FileSink &    fs )        throw ( Exception );
 
         /**
-         *  Get the file name this FileSink represents.
-         *
-         *  @return the file name this FileSink represents.
-         */
-        inline const char *
-        getFileName ( void ) const                  throw ()
-        {
-            return fileName;
-        }
-
-        /**
          *  Check for the existence of the file this FileSink represents.
          *
          *  @return true if the file exists and is a regular file,
          *          false otherwise.
          */
         virtual bool
-        exists ( void ) const                       throw ();
+        exists ( void )                       throw ();
 
         /**
          *  Create the file.
@@ -255,7 +246,7 @@ class FileSink : public Sink, public virtual Reporter
          *  until now, and start saving a new chunk of data.
          */
         virtual void
-        cut ( void )                                    throw ();
+        cut ( void )				    throw ();
 
         /**
          *  Close the FileSink.

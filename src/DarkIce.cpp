@@ -78,6 +78,7 @@
 #include "ShoutCast.h"
 #include "FileCast.h"
 #include "MultiThreadedConnector.h"
+#include "SinkLoop.h"
 #include "DarkIce.h"
 
 #ifdef HAVE_LAME_LIB
@@ -351,7 +352,7 @@ DarkIce :: configIceCast (  const Config      & config,
                 }
             }
 
-            localDumpFile = new FileSink( stream, localDumpName);
+            localDumpFile = new FileSink(stream, localDumpName, false, false);
             if ( !localDumpFile->exists() ) {
                 if ( !localDumpFile->create() ) {
                     reportEvent( 1, "can't create local dump file",
@@ -573,7 +574,7 @@ DarkIce :: configIceCast2 (  const Config      & config,
                 }
             }
 
-            localDumpFile = new FileSink( stream, localDumpName);
+            localDumpFile = new FileSink(stream, localDumpName, false, false);
             if ( !localDumpFile->exists() ) {
                 if ( !localDumpFile->create() ) {
                     reportEvent( 1, "can't create local dump file",
@@ -878,7 +879,7 @@ DarkIce :: configShoutCast (    const Config      & config,
                 }
             }
 
-            localDumpFile = new FileSink( stream, localDumpName);
+            localDumpFile = new FileSink(stream, localDumpName, false, false);
             if ( !localDumpFile->exists() ) {
                 if ( !localDumpFile->create() ) {
                     reportEvent( 1, "can't create local dump file",
@@ -962,6 +963,8 @@ DarkIce :: configFileCast (  const Config      & config )
         int                         highpass        = 0;
         bool                        fileAddDate     = false;
         const char                * fileDateFormat  = 0;
+	    int                         encDuration     = 0;
+        const char                * fileMode        = 0;
 
         format      = cs->getForSure( "format", " missing in section ", stream);
         if ( !Util::strEq( format, "vorbis")
@@ -1037,6 +1040,10 @@ DarkIce :: configFileCast (  const Config      & config )
         lowpass     = str ? Util::strToL( str) : 0;
         str         = cs->get( "highpass");
         highpass    = str ? Util::strToL( str) : 0;
+	    str         = cs->get( "duration");
+	    encDuration = str ? Util::strToL( str) : encDuration;
+        str         = cs->get( "fileMode");
+        fileMode    = str ? str : "duration";
 
         // go on and create the things
 
@@ -1051,7 +1058,7 @@ DarkIce :: configFileCast (  const Config      & config )
             }
         }
 
-        FileSink  * targetFile = new FileSink( stream, targetFileName);
+        FileSink  * targetFile = new FileSink(stream, targetFileName, true, true);
         if ( !targetFile->exists() ) {
             if ( !targetFile->create() ) {
                 throw Exception( __FILE__, __LINE__,
@@ -1165,7 +1172,22 @@ DarkIce :: configFileCast (  const Config      & config )
                                 "Illegal stream format: ", format);
         }
 
-        encConnector->attach( audioOuts[u].encoder.get());
+	    Sink * encsink = audioOuts[u].encoder.get();
+        if( encDuration > 0 ) {
+	        if( Util::strEq( fileMode, "duration") ) {
+	            //Break every n seconds
+	            encsink = new SinkLoop(encsink,durationBytes(encDuration));
+	        } else if ( Util::strEq( fileMode, "time") ) {
+	            //Break whenever time() % encDuration == 0
+	            int byteDuration = encDuration -3;
+	            if( byteDuration < 0 ) byteDuration = 0;
+	            encsink = new SinkLoop(encsink,durationBytes(byteDuration),encDuration);
+	        } else {
+                throw Exception( __FILE__, __LINE__, 
+                    "Unsupported fileMode: ", fileMode);
+            }
+        }
+        encConnector->attach(encsink);
     }
 
     noAudioOuts += u;
@@ -1282,6 +1304,15 @@ DarkIce :: encode ( void )                          throw ( Exception )
     encConnector->close();
 
     return true;
+}
+
+unsigned int
+DarkIce :: durationBytes (unsigned int dur)
+{
+        return  dsp->getSampleRate() *
+		(dsp->getBitsPerSample() / 8UL) *
+		dsp->getChannel() *
+		dur;
 }
 
 

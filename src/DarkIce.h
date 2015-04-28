@@ -148,7 +148,8 @@ class DarkIce : public virtual Referable, public virtual Reporter
          */
         void
         init (  const Config   & config )            throw ( Exception );
-
+	unsigned int
+	durationBytes (unsigned int dur);
         /**
          *  Look for the icecast stream outputs from the config file.
          *  Called from init()
