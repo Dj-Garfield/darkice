@@ -236,7 +236,7 @@ FileSink :: getFileName( void )
 }
 
 /*------------------------------------------------------------------------------
- *  Check wether a file exists and is regular file
+ *  Check whether a file exists and is regular file
  *----------------------------------------------------------------------------*/
 bool
 FileSink :: exists ( void )               throw ()
@@ -298,7 +298,7 @@ FileSink :: open ( void )                       throw ( Exception )
 }
 
 /*------------------------------------------------------------------------------
- *  Check wether the file can be written to
+ *  Check whether the file can be written to
  *----------------------------------------------------------------------------*/
 bool
 FileSink :: canWrite (     unsigned int    sec,
