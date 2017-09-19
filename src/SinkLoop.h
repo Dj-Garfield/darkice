@@ -8,19 +8,19 @@
    Version  : $Revision$
    Author   : $Author$
    Location : $Source$
-   
+
    Copyright notice:
 
     This program is free software; you can redistribute it and/or
-    modify it under the terms of the GNU General Public License  
+    modify it under the terms of the GNU General Public License
     as published by the Free Software Foundation; either version 2
     of the License, or (at your option) any later version.
-   
+
     This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of 
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-   
+
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -123,16 +123,16 @@ class SinkLoop : public Sink
     public:
 
         /**
-         *  Constructor.
-         *
-         *  @param targetSink the sink to send all data to
-	     *  @param dataLimit the limit (in bytes) of data to be written 
-         *         before we start checking if the time is right 
-         *         (usually 3 seconds less than the time)
-	     *  @param breakSeconds Duration of clips in seconds, 
-         *         if non-zero breaks occur when time() % breakSeconds == 0
-         *  @exception Exception
-         */
+        *  Constructor.
+        *
+        *  @param targetSink the sink to send all data to
+        *  @param dataLimit the limit (in bytes) of data to be written
+        *         before we start checking if the time is right
+        *         (usually 15 seconds less than the time)
+        *  @param breakSeconds Duration of clips in seconds,
+        *         if non-zero breaks occur when time() % breakSeconds == 0
+        *  @exception Exception
+        */
         inline
         SinkLoop (  Sink          * targetSink,
 		    unsigned int  dataLimit,
@@ -211,7 +211,7 @@ class SinkLoop : public Sink
 		        flush();
 	            targetSink->close();
 	        }
-	    
+
             //On the first pass we should be checking time() constantly
 	        //so that we're aligned to start with, so make it look like
 	        //we've already written enough to hit the limit...
@@ -253,7 +253,7 @@ class SinkLoop : public Sink
 	     *should never get here with written >= limit..
 	     */
 	    return targetSink->canWrite( sec, usec);
-		
+
         }
 
         /**
