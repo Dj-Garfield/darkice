@@ -64,12 +64,12 @@ class SinkLoop : public Sink
          */
         Ref<Sink>       targetSink;
 
-	unsigned int limit;
-	unsigned int written;
-	//if seconds > 0 then break whenever time() % seconds == 0
-	unsigned int seconds;
-	int prevModulus;
-	int firstPass;
+      	unsigned int limit;
+      	unsigned int written;
+      	//if seconds > 0 then break whenever time() % seconds == 0
+      	unsigned int seconds;
+      	int prevModulus;
+      	int firstPass;
 
         /**
          *  Initalize the object.
@@ -79,17 +79,16 @@ class SinkLoop : public Sink
          */
         inline void
         init (  Sink          * targetSink,
-		    unsigned int  dataLimit,
-		    unsigned int  breakSeconds)
-                                                    throw ( Exception )
+        		    unsigned int  dataLimit,
+        		    unsigned int  breakSeconds )        throw ( Exception )
         {
             this->targetSink = targetSink;
-	        limit = dataLimit;
-	        if(limit <= 0) throw Exception(__FILE__,__LINE__);
-	        written = 0;
-	        seconds = breakSeconds;
-	        prevModulus = -1;
-	        firstPass = 1;
+  	        limit = dataLimit;
+  	        if(limit <= 0) throw Exception(__FILE__,__LINE__);
+  	        written = 0;
+  	        seconds = breakSeconds;
+  	        prevModulus = -1;
+  	        firstPass = 1;
         }
 
         /**
@@ -135,10 +134,9 @@ class SinkLoop : public Sink
         */
         inline
         SinkLoop (  Sink          * targetSink,
-		    unsigned int  dataLimit,
-		    unsigned int  breakSeconds)
-                                                        throw ( Exception )
-                : Sink()
+            		    unsigned int  dataLimit,
+                    unsigned int  breakSeconds)                    throw ( Exception )
+                  : Sink()
         {
             init( targetSink,dataLimit,breakSeconds );
         }
@@ -152,9 +150,8 @@ class SinkLoop : public Sink
          */
         inline
         SinkLoop (  Sink          * targetSink,
-		    unsigned int  dataLimit )
-                                                        throw ( Exception )
-                : Sink()
+		                unsigned int  dataLimit )                     throw ( Exception )
+                  : Sink()
         {
             init( targetSink,dataLimit,0 );
         }
@@ -206,23 +203,23 @@ class SinkLoop : public Sink
          */
         inline virtual bool
         open ( void )                               throw ()
-	    {
-	        if(isOpen()) {
-		        flush();
-	            targetSink->close();
-	        }
+        {
+  	        if(isOpen()) {
+  		          flush();
+  	            targetSink->close();
+  	        }
 
             //On the first pass we should be checking time() constantly
-	        //so that we're aligned to start with, so make it look like
-	        //we've already written enough to hit the limit...
-	        if(firstPass && seconds > 0)
-		        written = limit +1;
-	        else
-		        written = 0;
-	        firstPass = 0;
-	        prevModulus = -1;
-	        return targetSink->open();
-	    }
+  	        //so that we're aligned to start with, so make it look like
+  	        //we've already written enough to hit the limit...
+  	        if(firstPass && seconds > 0)
+  		          written = limit +1;
+  	        else
+  		          written = 0;
+  	        firstPass = 0;
+  	        prevModulus = -1;
+  	        return targetSink->open();
+        }
 
         /**
          *  Check if the SinkLoop is open.
@@ -249,11 +246,10 @@ class SinkLoop : public Sink
         canWrite (     unsigned int    sec,
                        unsigned int    usec )       throw ( Exception )
         {
-	    /*No need to check here, since we check after every write,
-	     *should never get here with written >= limit..
-	     */
-	    return targetSink->canWrite( sec, usec);
-
+      	    /*No need to check here, since we check after every write,
+      	     *should never get here with written >= limit..
+      	     */
+      	    return targetSink->canWrite( sec, usec);
         }
 
         /**
@@ -269,21 +265,21 @@ class SinkLoop : public Sink
                        unsigned int    len )        throw ( Exception )
         {
             unsigned int ret = targetSink->write( buf, len);
-	        written += ret;
-	        if(written >= limit) {
-		        if(seconds > 0)	{
-		            int modulus = time(NULL) % seconds;
-		            if(modulus < prevModulus) {
-			            open();
-		            } else {
-			            prevModulus = modulus;
+  	        written += ret;
+  	        if(written >= limit) {
+  		          if(seconds > 0)	{
+    		            int modulus = time(NULL) % seconds;
+    		            if(modulus < prevModulus) {
+			                  open();
+	                  } else {
+  			                prevModulus = modulus;
                     }
-		        } else {
-		            //Force a close & re-open
-		            open();
+  		          } else {
+    		            //Force a close & re-open
+    		            open();
                 }
-	        }
-	    return ret;
+	          }
+	          return ret;
         }
 
         /**
@@ -309,11 +305,11 @@ class SinkLoop : public Sink
             return targetSink->close();
         }
 
-	    inline virtual void
-	    cut ( void )				    throw ()
-	    {
-	        return targetSink->cut();
-	    }
+  	    inline virtual void
+  	    cut ( void )				    throw ()
+  	    {
+  	        return targetSink->cut();
+  	    }
 };
 
 
